@@ -1,0 +1,88 @@
+_G.QKLoaded = true
+local Players, Camera, RunService, UIS = game:GetService("Players"), game:GetService("Workspace").CurrentCamera, game:GetService("RunService"), game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+local CFG = {Speed = false, SVal = 60, Fly = false, FVal = 50, Aim = false, Part = "Head", FOV = 100, SFOV = false, ESP = false}
+
+local Material = loadstring(game:HttpGet("https://githubusercontent.com"))()
+local UI = Material.Load({Title = "💜 QK MENU - DELTA 💜", Style = 3, SizeX = 400, SizeY = 280, Theme = "Purple"})
+local Main = UI.New({Title = "⚡ Chức Năng"})
+
+local SG = Instance.new("ScreenGui", game.CoreGui)
+local LB = Instance.new("TextLabel", SG)
+LB.Size, LB.Position, LB.BackgroundTransparency, LB.BackgroundColor3, LB.Text, LB.Font, LB.TextSize = UDim2.new(0,100,0,35), UDim2.new(0,10,0,50), 0.5, Color3.fromRGB(10,10,15), "[ QK HUB ]", Enum.Font.FredokaOne, 18
+local ST = Instance.new("UIStroke", LB) ST.Thickness = 1.2
+task.spawn(function() while _G.QKLoaded do task.wait(0.05) local c = Color3.fromHSV(tick()%4/4,0.8,1) LB.TextColor3, ST.Color = c, c end end)
+
+local Circle = Drawing.new("Circle") Circle.Color, Circle.Thickness, Circle.NumSides, Circle.Filled = Color3.fromRGB(160,32,240), 1.2, 32, false
+local function getClosest()
+    local t, s = nil, CFG.FOV
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild(CFG.Part) and p.Character:FindFirstChildOfClass("Humanoid") and p.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+            local pos, vis = Camera:WorldToViewportPoint(p.Character[CFG.Part].Position)
+            if vis then 
+                local screenCenter = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+                local d = (Vector2.new(pos.X, pos.Y) - screenCenter).Magnitude 
+                if d < s then t, s = p.Character[CFG.Part], d end 
+            end
+        end
+    end return t
+end
+RunService.RenderStepped:Connect(function()
+    Circle.Radius, Circle.Visible, Circle.Position = CFG.FOV, CFG.SFOV, Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+    if CFG.Aim then 
+        local t = getClosest() 
+        if t then Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, t.Position), 0.2) end 
+    end
+end)
+
+local bv, bg
+local function toggleFly()
+    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") if not root then return end
+    if CFG.Fly then
+        bg, bv = Instance.new("BodyGyro", root), Instance.new("BodyVelocity", root)
+        bg.P, bg.maxTorque, bv.maxForce = 9e4, Vector3.new(9e9,9e9,9e9), Vector3.new(9e9,9e9,9e9)
+        task.spawn(function()
+            while CFG.Fly and task.wait() do
+                if LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then LocalPlayer.Character:FindFirstChildOfClass("Humanoid").PlatformStand = true end
+                if UIS:IsKeyDown(Enum.KeyCode.Space) or (LocalPlayer.Character:FindFirstChildOfClass("Humanoid") and LocalPlayer.Character:FindFirstChildOfClass("Humanoid").MoveDirection.Magnitude > 0) then
+                    bv.velocity = Camera.CFrame.lookVector * CFG.FVal
+                else 
+                    bv.velocity = Vector3.new(0,0.1,0) 
+                end
+                bg.cframe = Camera.CFrame
+            end
+        end)
+    else
+        if bg then bg:Destroy() end if bv then bv:Destroy() end
+        if LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then LocalPlayer.Character:FindFirstChildOfClass("Humanoid").PlatformStand = false end
+    end
+end
+
+local function applyESP(p)
+    if p == LocalPlayer then return end
+    p.CharacterAdded:Connect(function(char)
+        local head = char:WaitForChild("Head", 5) if not head then return end
+        local bb = Instance.new("BillboardGui", char) bb.Name, bb.AlwaysOnTop, bb.Size, bb.StudsOffset, bb.Enabled = "QK_ESP", true, UDim2.new(0,150,0,40), Vector3.new(0,2.5,0), CFG.ESP
+        local lbl = Instance.new("TextLabel", bb) lbl.Size, lbl.BackgroundTransparency, lbl.Font, lbl.TextSize, lbl.TextColor3, lbl.TextStrokeTransparency = UDim2.new(1,0,1,0), 1, Enum.Font.SourceSansBold, 12, Color3.fromRGB(180,60,255), 0
+        local hl = Instance.new("Highlight", char) hl.Name, hl.FillColor, hl.OutlineColor, hl.Enabled = "QK_HL", Color3.fromRGB(140,30,255), Color3.fromRGB(255,255,255), CFG.ESP
+        task.spawn(function()
+            while char and char:Parent() and task.wait(0.5) do
+                local hum = char:FindFirstChildOfClass("Humanoid") local r = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if hum and r and char:FindFirstChild("HumanoidRootPart") then lbl.Text = string.format("%s\n[HP: %d] [%dm]", p.Name, hum.Health, math.floor((char.HumanoidRootPart.Position - r.Position).Magnitude)) end
+            end
+        end)
+    end)
+end
+for _, p in pairs(Players:GetPlayers()) do applyESP(p) end Players.PlayerAdded:Connect(applyESP)
+
+Main.Toggle({Text = "Bật Chạy Nhanh (Speed Hack)", Callback = function(v) CFG.Speed = v if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = v and CFG.SVal or 16 end end})
+Main.Slider({Text = "Chỉnh Tốc Độ Chạy", Min = 16, Max = 120, Def = 60, Callback = function(v) CFG.SVal = v if CFG.Speed and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = v end end})
+Main.Toggle({Text = "Bật Chế Độ Bay (Fly)", Callback = function(v) CFG.Fly = v toggleFly() end})
+Main.Toggle({Text = "Bật Tự Động Ngắm (Aimbot)", Callback = function(v) CFG.Aim = v end})
+Main.Toggle({Text = "Hiện Vòng Tròn Tâm Ngắm FOV", Callback = function(v) CFG.SFOV = v end})
+Main.Toggle({Text = "Bật Nhìn Xuyên Tường (ESP)", Callback = function(v) CFG.ESP = v for _, p in pairs(Players:GetPlayers()) do if p.Character then if p.Character:FindFirstChild("QK_ESP") then p.Character.QK_ESP.Enabled = v end if p.Character:FindFirstChild("QK_HL") then p.Character.QK_HL.Enabled = v end end end end})
+Main.Button({Text = "Kích Hoạt Fix Lag Điện Thoại", Callback = function() for _, v in pairs(game:GetDescendants()) do if v:IsA("VisualEffect") or v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") then v:Destroy() elseif v:IsA("Texture") or v:IsA("Decal") then v.Texture = "" end end end})
+Main.Button({Text = "HỦY SCRIPT KHẨN CẤP", Callback = function() _G.QKLoaded = false Circle:Destroy() SG:Destroy() CFG.Fly = false toggleFly() if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 16 end for _, p in pairs(Players:GetPlayers()) do if p.Character then if p.Character:FindFirstChild("QK_ESP") then p.Character.QK_ESP:Destroy() end if p.Character:FindFirstChild("QK_HL") then p.Character.QK_HL:Destroy() end end end end})
+
+LocalPlayer.CharacterAdded:Connect(function(c) local h = c:WaitForChild("Humanoid", 10) if h then task.wait(1) h.WalkSpeed = CFG.Speed and CFG.SVal or 16 end end)
